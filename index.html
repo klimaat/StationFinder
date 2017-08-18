@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset='utf-8'>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ASHRAE Climatic Design Conditions - Station Finder (c) ASHRAE, 2017</title>
+<meta name="description" content="Stations in the 2017 edition of the ASHRAE Handbook of Fundaments." />
+<meta name="keywords" content="climate,data" />
+<script type="text/javascript" src="//maps.google.com/maps/api/js?key=AIzaSyB-UcUUneAY__p_bgGObxhVa0hPXRVj_TA&libraries=places"></script>
+<script type="text/javascript" src="js/markerclusterer.js"></script>
+<script type="text/javascript"  src="js/stations_2013.js"></script>
+<script type="text/javascript"  src="js/stations_2017.js"></script>
+
+<style type="text/css">
+html { height: 100%; font:400 12px Roboto, Arial, sans-serif; }
+body { height: 100%; margin: 0; padding: 0 }
+#map_canvas { height: 100%; width:100%; position: absolute; left: 0px; right: 0px;}
+.controls {margin-top: 10px; border: 1px solid transparent; border-radius: 2px 0 0 2px; box-sizing: border-box; -moz-box-sizing: border-box; height: 31px; outline: none; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);}
+#pac-input {background-color: #fff; font-size: 15px; font-weight: 300; margin-left: 12px; padding: 0 11px 0 13px; text-overflow: ellipsis; width: 300px;}
+#pac-input:focus {border-color: #4d90fe;}
+#year-input {background-color: #fff; font-size: 15px; font-weight: 300; margin-left: 12px;}
+.centered {position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1}
+#loading {font-size: x-large;}
+</style>
+
+</head>
+
+<body>
+
+<div id="loading" class="centered">Loading...</div>
+<div id="map_canvas"></div>
+<div>
+<select id="year-input" class="controls">
+    <option value="2013" selected>WDView 5.0 (2013)</option>
+    <option value="2017">WDView 6.0 (2017)</option>
+</select>
+</div>
+<input id="pac-input" class="controls" type="text" placeholder="Search places..." />
+<script type="text/javascript">
+
+var markers = [];
+var markerCluster;
+var info;
+var map;
+
+function stationHTML(station) {
+
+    var html = '';
+    html += '<div id="info_win">';
+    html += '<strong>' + station.Name
+    html += '<br>';
+    html += '<hr>';
+    html += 'WMO: ' + station.WMO + '<BR>';
+    html += 'Lat: ' + station.Lat + '<BR>';
+    html += 'Lon: ' + station.Lon + '<BR>';
+    var elev = parseFloat(station.Elev);
+    var elevImp = Math.round(elev * 3.2808399);
+    html += 'Elev: ' + elev + 'm / ' + elevImp + 'ft<BR>';
+    html += '</div>';
+
+    return html;
+}
+
+function popStation(anchor) {
+    var html = stationHTML(anchor.station);
+    info.setContent(html);
+    info.open(map, anchor);
+    return false;
+}
+
+function popList(markcluster) {
+
+    var cluster = markcluster.clusters_;
+
+    if (cluster.length == 1 && cluster[0].markers_.length > 1) {
+        var markers = cluster[0].markers_;
+        var html = '';
+        html += '<div>';
+        html += '<ul style="padding: 0">';
+        for (var i=0; i < markers.length; i++) {
+            html += '<li>';
+            html += '<div style="padding: 10px 0px 0px 0px">';
+            html += '<strong>Station #' + (i+1) + '</strong>';
+            html += '</div>';
+            html += stationHTML(markers[i].station);
+            html +='</li>';
+        }
+        html += '</ul>';
+        html += '</div>';
+        info.setContent(html);
+        info.open(map, markers[0]);
+        return false;
+    }
+
+    return true;
+}
+
+function updateMarkers(year) {
+
+    var stations;
+
+    if (year == 2013) {
+        stations = stations_2013;
+    }
+    else {
+        stations = stations_2017;
+    }
+
+    markers = [];
+    markerClusterer.clearMarkers();
+
+    if (stations.length > 0) {
+        for (var i=0; i < stations.length; i++) {
+            var ll = new google.maps.LatLng(stations[i].Lat, stations[i].Lon);
+
+            var marker = new google.maps.Marker({
+                clickable: true,
+                position: ll,
+                icon: {
+                    path: 'M -1.5 -1.5 L 1.5 -1.5 L 1.5 1.5 L -1.5 1.5 z',
+                    scale: 6,
+                    strokeColor: 'white',
+                    strokeWeight: 1,
+                    fillOpacity: 0.8,
+                    fillColor: 'green',
+                },
+                title: stations[i].WMO + " " + stations[i].Name ,
+                station: stations[i]
+            });
+
+            markers.push(marker);
+            google.maps.event.addListener(marker, 'click', function() {
+                popStation(this);
+            });
+        }
+    }
+
+    markerClusterer.addMarkers(markers);
+
+    return true;
+
+}
+
+function initialize() {
+
+    var myOptions = {
+        disableDefaultUI: false,
+        mapTypeControl: true,
+        streetViewControl: true,
+        zoom: 2,
+        center: new google.maps.LatLng(0., 0.),
+        navigationControl: true,
+        navigationControlOptions: {
+            style: google.maps.NavigationControlStyle.SMALL
+        },
+        mapTypeId: google.maps.MapTypeId.TERRAIN
+    };
+
+    map = new google.maps.Map(document.getElementById('map_canvas'), myOptions);
+
+    info = new google.maps.InfoWindow({ content: '' });
+
+    // Add MarkerCluster; gridSize controls distance in pixels between clusters
+    markerClusterer = new MarkerClusterer(map, {'gridSize': 60});
+    markerClusterer.onClickZoom = function() {
+        return popList(markerClusterer);
+    }
+    updateMarkers(2017);
+
+    // Link the year input
+    var year_input = document.getElementById('year-input');
+    map.controls[google.maps.ControlPosition.TOP_LEFT].push(year_input);
+    google.maps.event.addDomListener(year_input, 'change', function() {
+        updateMarkers(year_input.options[year_input.selectedIndex].value);
+    });
+
+    // Bias the SearchBox results towards current map's viewport.
+    // Create the search box and link it to the UI element.
+    var input = document.getElementById('pac-input');
+    var searchBox = new google.maps.places.SearchBox(input);
+    map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+
+    map.addListener('bounds_changed', function() {
+      searchBox.setBounds(map.getBounds());
+    });
+
+    // Listen for the event fired when the user selects a prediction and retrieve
+    // more details for that place.
+    searchBox.addListener('places_changed', function() {
+      var places = searchBox.getPlaces();
+
+      if (places.length == 0) {
+        return;
+      }
+
+      // For each place, work out bounds
+      var bounds = new google.maps.LatLngBounds();
+      places.forEach(function(place) {
+
+        if (place.geometry.viewport) {
+          // Only geocodes have viewport.
+          bounds.union(place.geometry.viewport);
+        } else {
+          bounds.extend(place.geometry.location);
+        }
+      });
+      map.fitBounds(bounds);
+    });
+
+    // We're good to go; let's turn on the places search box and turn off loading
+    google.maps.event.addListenerOnce(map, 'tilesloaded', function() {
+        document.getElementById('loading').style.visibility = "hidden";
+    });
+}
+
+window.onload = initialize;
+
+</script>
+
+<noscript>
+<div class="centered">
+Please enable Javascript in your browser.
+</div>
+</noscript>
+
+</body>
+
+</html>
