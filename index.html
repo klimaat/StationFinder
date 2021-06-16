@@ -3,13 +3,14 @@
 <head>
 <meta charset='utf-8'>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ASHRAE Climatic Design Conditions - Station Finder (c) ASHRAE, 2017</title>
-<meta name="description" content="Stations in the 2017 edition of the ASHRAE Handbook of Fundaments." />
+<title>ASHRAE Climatic Design Conditions - Station Finder (c) ASHRAE, 2021</title>
+<meta name="description" content="Stations in the 2013, 2017, and 2021 edition of the ASHRAE Handbook of Fundaments." />
 <meta name="keywords" content="climate,data" />
 <script type="text/javascript" src="//maps.google.com/maps/api/js?key=AIzaSyB-UcUUneAY__p_bgGObxhVa0hPXRVj_TA&libraries=places"></script>
 <script type="text/javascript" src="js/markerclusterer.js"></script>
 <script type="text/javascript"  src="js/stations_2013.js"></script>
 <script type="text/javascript"  src="js/stations_2017.js"></script>
+<script type="text/javascript"  src="js/stations_2021.js"></script>
 
 <style type="text/css">
 html { height: 100%; font:400 12px Roboto, Arial, sans-serif; }
@@ -31,8 +32,9 @@ body { height: 100%; margin: 0; padding: 0 }
 <div id="map_canvas"></div>
 <div>
 <select id="year-input" class="controls">
-    <option value="2013">WDView 5.0 (2013)</option>
-    <option value="2017" selected>WDView 6.0 (2017)</option>
+    <option value="2013">2013 Handbook</option>
+    <option value="2017">2017 Handbook</option>
+    <option value="2021" selected>2021 Handbook</option>
 </select>
 </div>
 <input id="pac-input" class="controls" type="text" placeholder="Search places..." />
@@ -99,11 +101,16 @@ function updateMarkers(year) {
 
     var stations;
 
-    if (year == 2013) {
-        stations = stations_2013;
-    }
-    else {
-        stations = stations_2017;
+    switch(parseInt(year)) {
+        case 2013:
+            stations = stations_2013;
+            break;
+        case 2017:
+            stations = stations_2017;
+            break;
+        default:
+            stations = stations_2021;
+            break;
     }
 
     markers = [];
@@ -165,7 +172,7 @@ function initialize() {
     markerClusterer.onClickZoom = function() {
         return popList(markerClusterer);
     }
-    updateMarkers(2017);
+    updateMarkers(2021);
 
     // Link the year input
     var year_input = document.getElementById('year-input');
